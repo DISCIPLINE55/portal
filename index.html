@@ -1,32 +1,37 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AL KHULAFAU 2025 — Student Search & Enrollment (Single-file PWA)</title>
+  <title>Alkhulafau Enrollment PWA � Student Search & Enrollment</title>
+  <meta name="theme-color" content="#006D77">
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- UI (Tailwind) -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- External libs (CDN) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
-  <meta name="theme-color" content="#5563DE">
   <style>
-    :root{--bg1:#74ABE2;--bg2:#5563DE;--card:#ffffff}
+    :root{--bg1:#EDF6F9;--bg2:#83C5BE;--brand:#006D77;--card:#ffffff}
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial; margin:0; min-height:100vh; background:linear-gradient(135deg,var(--bg1),var(--bg2)); display:flex; align-items:center; justify-content:center; padding:24px}
     .app{width:100%;max-width:1100px;background:var(--card);border-radius:16px;padding:20px;box-shadow:0 12px 40px rgba(12,20,40,0.18)}
     .header{display:flex;align-items:center;justify-content:space-between;gap:12px}
     h1{margin:0;font-size:20px}
-    .tabs{display:flex;gap:8px;margin-top:14px}
+    .tabs{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
     .tab{padding:8px 12px;border-radius:10px;border:1px solid #e6e9ef;background:#f7f8fb;cursor:pointer}
-    .tab.active{background:linear-gradient(90deg,var(--bg2),#3b49b7);color:#fff;border:none}
+    .tab.active{background:linear-gradient(90deg,var(--brand),#0b8b97);color:#fff;border:none}
     .content{margin-top:18px}
     .row{display:flex;gap:12px}
     .col{flex:1}
     input[type=text],select,input[type=file],input[type=date],input[type=password],input{width:100%;padding:10px;border-radius:8px;border:1px solid #e3e6ee}
     label{display:block;margin-bottom:6px;font-size:13px}
-    .btn{display:inline-block;padding:10px 14px;border-radius:10px;border:none;background:var(--bg2);color:#fff;cursor:pointer}
+    .btn{display:inline-block;padding:10px 14px;border-radius:10px;border:none;background:var(--brand);color:#fff;cursor:pointer}
     .btn.secondary{background:#2ecc71}
     .btn.ghost{background:transparent;color:#333;border:1px solid #e6e9ef}
     .btn.warn{background:#e74c3c}
@@ -41,7 +46,7 @@
     .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);z-index:60}
     .modal-card{background:#fff;padding:20px;border-radius:12px;width:420px;max-width:92%}
     .muted{color:#666;font-size:13px}
-    .role-badge{padding:6px 8px;border-radius:8px;background:#f1f3ff;color:#2b3bfb;font-weight:600}
+    .role-badge{padding:6px 8px;border-radius:8px;background:#f1f3ff;color:#0b8b97;font-weight:600}
     .disabled{opacity:0.45;pointer-events:none}
     .flex-between{display:flex;justify-content:space-between;align-items:center}
     .top-actions{display:flex;gap:8px}
@@ -49,12 +54,12 @@
     @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
-<body>
+<body class="h-full">
   <div class="app" role="application">
     <div class="header">
       <div>
-        <h1>AL KHULAFAU 2025 — Student Tool</h1>
-        <div class="small muted">Single-file PWA · Excel & PDF import · Export XLSX/PDF · Offline-capable</div>
+        <h1 class="text-lg font-semibold text-slate-800">Alkhulafau Enrollment PWA</h1>
+        <div class="small muted">Installable � Offline-first � Excel/PDF import (with OCR) � Export XLSX/PDF</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <div id="currentUser" class="muted">Not signed in</div>
@@ -64,9 +69,10 @@
     </div>
 
     <div class="tabs" role="tablist">
-      <div class="tab active" data-tab="search">🔍 Search Placed</div>
-      <div class="tab" data-tab="enroll">📝 Enrollment</div>
-      <div class="tab" data-tab="manage">⚙️ Manage</div>
+      <div class="tab active" data-tab="search">?? Search</div>
+      <div class="tab" data-tab="enroll">?? Enrollment</div>
+      <div class="tab" data-tab="manage">?? Manage</div>
+      <div class="tab" data-tab="profile">?? Profile</div>
     </div>
 
     <div class="content">
@@ -76,18 +82,36 @@
         <div class="panel">
           <div class="row">
             <div class="col">
-              <label>Load Placed Candidates (Excel or PDF)</label>
+              <label>Load Candidates (Excel or PDF)</label>
               <input type="file" id="placedFile" accept=".xlsx,.xls,.pdf" />
             </div>
             <div class="col">
-              <label>Search by Index or Name</label>
-              <input type="text" id="placedQuery" placeholder="e.g. 0801061023 or ABDUL" />
+              <label>Search</label>
+              <input type="text" id="placedQuery" placeholder="Index or name" />
+            </div>
+            <div class="col">
+              <label>Course</label>
+              <input type="text" id="filterCourse" placeholder="e.g. Gen. Arts" />
+            </div>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <div class="col">
+              <label>Gender</label>
+              <select id="filterGender"><option value="">Any</option><option>Male</option><option>Female</option><option>Other</option></select>
+            </div>
+            <div class="col">
+              <label>Region</label>
+              <input type="text" id="filterRegion" placeholder="Region" />
+            </div>
+            <div class="col">
+              <label>Status</label>
+              <input type="text" id="filterStatus" placeholder="Placed/Enrolled/etc" />
             </div>
             <div style="display:flex;align-items:flex-end;gap:8px">
               <button class="btn" id="placedSearchBtn">Search</button>
+              <button class="btn ghost" onclick="document.getElementById('placedQuery').value='';document.getElementById('filterCourse').value='';document.getElementById('filterGender').value='';document.getElementById('filterRegion').value='';document.getElementById('filterStatus').value='';">Reset</button>
             </div>
           </div>
-
           <div id="placedResults" style="margin-top:12px"></div>
         </div>
       </div>
@@ -105,67 +129,30 @@
               <div id="enrollCount" class="result-card">0</div>
             </div>
           </div>
-
           <hr style="margin:12px 0" />
-
           <div style="margin-top:8px">
             <h3 style="margin:0 0 8px 0">New Student Enrollment</h3>
             <div class="row">
-              <div class="col">
-                <label>Index Number</label>
-                <input type="text" id="e_index" />
-              </div>
-              <div class="col">
-                <label>Name</label>
-                <input type="text" id="e_name" />
-              </div>
+              <div class="col"><label>Index Number</label><input type="text" id="e_index" /></div>
+              <div class="col"><label>Name</label><input type="text" id="e_name" /></div>
             </div>
             <div class="row" style="margin-top:8px">
-              <div class="col">
-                <label>Gender</label>
-                <select id="e_gender">
-                  <option>Male</option>
-                  <option>Female</option>
-                  <option>Other</option>
-                </select>
-              </div>
-              <div class="col">
-                <label>Phone Number</label>
-                <input type="text" id="e_phone" />
-              </div>
+              <div class="col"><label>Gender</label><select id="e_gender"><option>Male</option><option>Female</option><option>Other</option></select></div>
+              <div class="col"><label>Phone Number</label><input type="text" id="e_phone" /></div>
             </div>
-
             <div class="row" style="margin-top:8px">
-              <div class="col">
-                <label>Residence Type</label>
-                <select id="e_res">
-                  <option>Day</option>
-                  <option>Boarding</option>
-                </select>
-              </div>
-              <div class="col">
-                <label>Program</label>
-                <input type="text" id="e_prog" placeholder="e.g. Gen. Arts / Agric / Bus" />
-              </div>
+              <div class="col"><label>Residence Type</label><select id="e_res"><option>Day</option><option>Boarding</option></select></div>
+              <div class="col"><label>Course</label><input type="text" id="e_prog" placeholder="e.g. Gen. Arts / Agric / Bus" /></div>
             </div>
-
             <div class="row" style="margin-top:8px">
-              <div class="col">
-                <label>Class / Form</label>
-                <input type="text" id="e_class" placeholder="e.g. Form 1" />
-              </div>
-              <div class="col">
-                <label>Date Enrolled</label>
-                <input type="date" id="e_date" />
-              </div>
+              <div class="col"><label>Class / Form</label><input type="text" id="e_class" placeholder="e.g. Form 1" /></div>
+              <div class="col"><label>Date Enrolled</label><input type="date" id="e_date" /></div>
             </div>
-
             <div style="margin-top:12px; display:flex; gap:8px">
               <button class="btn" id="addEnrollBtn">Add to Enrollment (offline-safe)</button>
               <button class="btn" id="exportEnrollBtn">Export Enrollment XLSX</button>
               <button class="btn secondary" id="exportEnrollPdfBtn">Export Enrollment PDF</button>
             </div>
-
             <div id="enrollList" style="margin-top:12px"></div>
           </div>
         </div>
@@ -177,27 +164,32 @@
           <h3 style="margin-top:0">Manage Data</h3>
           <div class="row">
             <div class="col">
-              <label>Clear in-memory enrollment (careful)</label>
-              <button class="btn warn" id="clearEnrollBtn">Clear Local Enrollment</button>
+              <label>Maintenance</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn warn" id="clearEnrollBtn">Clear Local Enrollment</button>
+                <button class="btn ghost" id="downloadSwBtn">Download sw.js (copy)</button>
+              </div>
             </div>
             <div class="col">
-              <label>Download sample templates</label>
+              <label>Templates</label>
               <div style="display:flex;gap:8px">
                 <button class="btn" id="downloadPlacedTemplate">Placed Template</button>
                 <button class="btn" id="downloadEnrollTemplate">Enrollment Template</button>
               </div>
             </div>
           </div>
+          <div class="note" style="margin-top:12px">Single-file PWA. For maximum compatibility on Vercel, also add a root <code>/sw.js</code> and icons plus manifest.json.</div>
+        </div>
+      </div>
 
-          <div class="note" style="margin-top:12px">
-            This is a single-file PWA. Service-worker registration is attempted inline (best-effort). For maximum compatibility, when you deploy to Vercel add a separate <code>/sw.js</code> file (I include the same sw source at the end of this file in a commented block you can copy).
+      <!-- PROFILE TAB -->
+      <div id="profile" class="tab-content" style="display:none">
+        <div class="panel">
+          <h3 style="margin-top:0">Profile & Preferences</h3>
+          <div id="profileInfo" class="small muted">Signed out</div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn ghost" id="themeToggle">Toggle Dark Mode</button>
           </div>
-
-          <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-            <button class="btn ghost" id="downloadSwBtn">Download sw.js (copy)</button>
-            <div class="muted">&nbsp;</div>
-          </div>
-
         </div>
       </div>
 
@@ -208,7 +200,7 @@
   <div id="signinModal" class="modal" style="display:none">
     <div class="modal-card">
       <h3 style="margin-top:0">Sign In</h3>
-      <div style="margin-bottom:8px" class="muted">Use default accounts to test: <strong>admin/admin</strong> (Admin), <strong>staff/staff</strong> (Staff), <strong>viewer/viewer</strong> (Viewer)</div>
+      <div style="margin-bottom:8px" class="muted">Default accounts: <strong>admin/admin</strong> (Admin), <strong>staff/staff</strong> (Staff), <strong>viewer/viewer</strong> (Viewer)</div>
       <label>Username</label>
       <input type="text" id="signin_user" />
       <label style="margin-top:8px">Password</label>
@@ -222,12 +214,6 @@
   </div>
 
   <script>
-  /**********************************************************
-   * Single-file PWA app script
-   * - uses XLSX (global XLSX), PDF.js (pdfjsLib), jsPDF (window.jspdf)
-   * - creates manifest blob (installable)
-   * - creates a best-effort service worker blob and tries to register it
-   **********************************************************/
   (function(){
     // --- state ---
     let placedData = [];
@@ -248,14 +234,21 @@
     // --- helpers ---
     const $ = id => document.getElementById(id);
     function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-    function showAlert(msg){ alert(msg); }
+    function showToast(msg, type='info'){
+      let box = document.getElementById('toastBox');
+      if(!box){ box = document.createElement('div'); box.id='toastBox'; box.style.position='fixed'; box.style.top='16px'; box.style.right='16px'; box.style.zIndex='70'; document.body.appendChild(box); }
+      const el = document.createElement('div');
+      el.textContent = msg; el.style.padding='10px 12px'; el.style.marginTop='8px'; el.style.borderRadius='10px'; el.style.color='#fff'; el.style.boxShadow='0 6px 20px rgba(0,0,0,0.15)';
+      el.style.background = type==='error' ? '#e74c3c' : (type==='success' ? '#1abc9c' : '#006D77');
+      box.appendChild(el); setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .4s'; setTimeout(()=>el.remove(), 400); }, 2500);
+    }
+    const updateProfileInfo = ()=>{ document.getElementById('profileInfo').textContent = currentUser ? `${currentUser.username} (${currentUser.role})` : 'Signed out'; };
 
     function updateUserUI(){
-      const el = $('currentUser');
-      const signBtn = $('signBtn');
+      const el = $('currentUser'); const signBtn = $('signBtn');
       if(currentUser){ el.innerHTML = `${escapeHtml(currentUser.username)} <span class="role-badge">${escapeHtml(currentUser.role)}</span>`; signBtn.textContent='Sign Out'; }
       else { el.innerText = 'Not signed in'; signBtn.textContent='Sign In'; }
-      applyPermissions();
+      applyPermissions(); updateProfileInfo();
     }
 
     function applyPermissions(){
@@ -270,9 +263,9 @@
     function renderPlacedResults(rows){
       const out = $('placedResults');
       if(!rows || rows.length===0){ out.innerHTML = '<div class="result-card">No results.</div>'; return; }
-      let html = '<table><thead><tr><th>Index</th><th>Name</th><th>Gender</th><th>Phone</th><th>Res</th></tr></thead><tbody>';
+      let html = '<table><thead><tr><th>Index</th><th>Name</th><th>Course</th><th>Gender</th><th>Region</th><th>Status</th></tr></thead><tbody>';
       rows.slice(0,500).forEach(r=>{
-        html += `<tr><td>${escapeHtml(r['INDEX NUMBER']||r.index||'')}</td><td>${escapeHtml(r['NAME']||r.name||'')}</td><td>${escapeHtml(r['GENDER']||'')}</td><td>${escapeHtml(r['PHONE NUMBER']||r.phone||'')}</td><td>${escapeHtml(r['RESIDENCE TYPE']||r.res||'')}</td></tr>`;
+        html += `<tr><td>${escapeHtml(r['INDEX NUMBER']||'')}</td><td>${escapeHtml(r['NAME']||'')}</td><td>${escapeHtml(r['COURSE']||'')}</td><td>${escapeHtml(r['GENDER']||'')}</td><td>${escapeHtml(r['REGION']||'')}</td><td>${escapeHtml(r['STATUS']||'')}</td></tr>`;
       });
       html += '</tbody></table>';
       if(rows.length>500) html += `<div class="small">Showing first 500 of ${rows.length} matches</div>`;
@@ -283,9 +276,9 @@
       $('enrollCount').innerText = enrollmentData.length;
       const el = $('enrollList');
       if(enrollmentData.length===0){ el.innerHTML = '<div class="result-card small">No enrollment records stored locally.</div>'; return; }
-      let html = '<table><thead><tr><th>Index</th><th>Name</th><th>Gender</th><th>Phone</th><th>Program</th><th>Date</th></tr></thead><tbody>';
+      let html = '<table><thead><tr><th>Index</th><th>Name</th><th>Course</th><th>Gender</th><th>Date</th></tr></thead><tbody>';
       enrollmentData.forEach(r=>{
-        html += `<tr><td>${escapeHtml(r['INDEX NUMBER']||r.index||'')}</td><td>${escapeHtml(r['NAME']||r.name||'')}</td><td>${escapeHtml(r['GENDER']||'')}</td><td>${escapeHtml(r['PHONE NUMBER']||r.phone||'')}</td><td>${escapeHtml(r['PROGRAM']||r.program||'')}</td><td>${escapeHtml(r['DATE ENROLLED']||r.date||'')}</td></tr>`;
+        html += `<tr><td>${escapeHtml(r['INDEX NUMBER']||'')}</td><td>${escapeHtml(r['NAME']||'')}</td><td>${escapeHtml(r['COURSE']||r['PROGRAM']||'')}</td><td>${escapeHtml(r['GENDER']||'')}</td><td>${escapeHtml(r['DATE ENROLLED']||'')}</td></tr>`;
       });
       html += '</tbody></table>';
       el.innerHTML = html;
@@ -300,7 +293,6 @@
     }
 
     async function readPdfFile(file){
-      // Basic text extraction and heuristic parsing.
       const data = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({data}).promise;
       const pagesText = [];
@@ -310,13 +302,11 @@
         pagesText.push(txt.items.map(i=>i.str).join(' '));
       }
       const combined = pagesText.join('\n');
-      // split lines and attempt to detect rows containing index numbers of 6-12 digits
       const lines = combined.split(/[\r\n]+/).map(l=>l.trim()).filter(Boolean);
       const rows = [];
       for(const line of lines){
         const idxMatch = line.match(/\b\d{6,12}\b/);
         if(idxMatch){
-          // split by multiple spaces or common separators
           let parts = line.split(/\s{2,}|,|\|/).map(s=>s.trim()).filter(Boolean);
           if(parts.length < 3){
             const tokens = line.split(/\s+/).filter(Boolean);
@@ -333,39 +323,69 @@
           }
         }
       }
+      if(rows.length===0 && window.Tesseract){ return await ocrPdf(file); }
       return rows;
     }
 
-    // --- Merge helper ---
+    async function ocrPdf(file){
+      const data = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({data}).promise;
+      const results = [];
+      for(let p=1;p<=pdf.numPages;p++){
+        const page = await pdf.getPage(p);
+        const viewport = page.getViewport({scale:2});
+        const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+        canvas.width = viewport.width; canvas.height = viewport.height;
+        await page.render({canvasContext: ctx, viewport}).promise;
+        const dataUrl = canvas.toDataURL('image/png');
+        try{
+          const { data: { text } } = await Tesseract.recognize(dataUrl, 'eng');
+          const lines = text.split(/[\r\n]+/).map(s=>s.trim()).filter(Boolean);
+          for(const line of lines){
+            const m = line.match(/\b\d{6,12}\b/);
+            if(m){ const idx = m[0]; const name = line.replace(idx,'').trim().split(/\s{2,}|\s+/).slice(0,4).join(' '); results.push({'INDEX NUMBER': idx, 'NAME': name}); }
+          }
+        }catch(e){ console.warn('OCR fail on page', p, e); }
+      }
+      return results;
+    }
+
+    function normalizeRecord(rec){
+      const idx = rec['INDEX NUMBER']||rec.index||rec.Index||rec["Index Number"]||'';
+      return {
+        'INDEX NUMBER': String(idx||'').trim(),
+        'NAME': rec['NAME']||rec.name||rec["Name"]||'',
+        'COURSE': rec['COURSE']||rec.course||rec['PROGRAM']||rec.program||'',
+        'GENDER': rec['GENDER']||rec.gender||'',
+        'REGION': rec['REGION']||rec.region||'',
+        'STATUS': rec['STATUS']||rec.status||'',
+        'PHONE NUMBER': rec['PHONE NUMBER']||rec.phone||'',
+        'RESIDENCE TYPE': rec['RESIDENCE TYPE']||rec.res||'',
+        'DATE ENROLLED': rec['DATE ENROLLED']||rec.date||''
+      };
+    }
+
     function mergeIntoEnrollment(loaded){
       let added = 0;
-      loaded.forEach(rec=>{
-        const idx = String(rec['INDEX NUMBER']||rec.index||'').trim();
-        if(!idx) return;
-        const dup = enrollmentData.find(x=>String(x['INDEX NUMBER']||x.index||'').trim()===idx);
-        if(!dup){
-          const norm = {
-            'INDEX NUMBER': idx,
-            'NAME': rec['NAME']||rec.name||'',
-            'GENDER': rec['GENDER']||rec.gender||'',
-            'PHONE NUMBER': rec['PHONE NUMBER']||rec.phone||'',
-            'RESIDENCE TYPE': rec['RESIDENCE TYPE']||rec.res||'',
-            'PROGRAM': rec['PROGRAM']||rec.program||'',
-            'CLASS': rec['CLASS']||rec.class||'',
-            'DATE ENROLLED': rec['DATE ENROLLED']||rec.date||new Date().toISOString().slice(0,10)
-          };
-          enrollmentData.push(norm);
-          added++;
-        }
+      loaded.forEach(r=>{
+        const rec = normalizeRecord(r);
+        const idx = rec['INDEX NUMBER']; if(!idx) return;
+        const dup = enrollmentData.find(x=>String(x['INDEX NUMBER']||'').trim()===idx);
+        if(!dup){ enrollmentData.push(rec); added++; }
+        else { Object.keys(rec).forEach(k=>{ if(!dup[k] && rec[k]) dup[k]=rec[k]; }); }
       });
       localStorage.setItem('enrollmentData', JSON.stringify(enrollmentData));
       renderEnrollmentList();
       return added;
     }
 
-    // --- Wiring UI ---
     function setup(){
-      // Tabs
+      try{ initManifest(); }catch(e){}
+      document.getElementById('themeToggle').addEventListener('click', ()=>{
+        document.documentElement.classList.toggle('dark');
+        showToast('Theme toggled');
+      });
+
       document.querySelectorAll('.tab').forEach(t=>{
         t.addEventListener('click', ()=>{
           document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
@@ -375,119 +395,79 @@
         });
       });
 
-      // Placed file input
       $('placedFile').addEventListener('change', async (e)=>{
         const f = e.target.files[0]; if(!f) return;
         try{
           let loaded = [];
-          if(/\.pdf$/i.test(f.name)) loaded = await readPdfFile(f);
-          else loaded = await readExcelFile(f);
+          if(/\.pdf$/i.test(f.name)) loaded = await readPdfFile(f); else loaded = await readExcelFile(f);
+          loaded = loaded.map(normalizeRecord);
           placedData = placedData.concat(loaded);
-          showAlert('Placed candidates loaded: ' + loaded.length);
-        } catch(err){
-          console.error(err); showAlert('Error loading placed file: ' + (err.message||err));
-        }
+          showToast('Candidates loaded: ' + loaded.length, 'success');
+        }catch(err){ showToast('Load error: '+(err.message||err), 'error'); }
       });
 
-      // Enroll file input
       $('enrollFile').addEventListener('change', async (e)=>{
         const f = e.target.files[0]; if(!f) return;
         try{
           let loaded = [];
-          if(/\.pdf$/i.test(f.name)) loaded = await readPdfFile(f);
-          else loaded = await readExcelFile(f);
+          if(/\.pdf$/i.test(f.name)) loaded = await readPdfFile(f); else loaded = await readExcelFile(f);
           const added = mergeIntoEnrollment(loaded);
-          showAlert('Enrollment sheet loaded and appended — new records: ' + added);
-        } catch(err){
-          console.error(err); showAlert('Error loading enrollment file: ' + (err.message||err));
-        }
+          showToast('Enrollment appended: '+added, 'success');
+        }catch(err){ showToast('Enroll load error: '+(err.message||err), 'error'); }
       });
 
-      // Search
-      $('placedSearchBtn').addEventListener('click', ()=>{
-        const q = $('placedQuery').value.trim().toLowerCase();
-        if(!q){ showAlert('Enter a query'); return; }
-        const results = placedData.filter(r=> (String(r['INDEX NUMBER']||r.index||'').toLowerCase().includes(q) || String(r['NAME']||r.name||'').toLowerCase().includes(q)) );
-        renderPlacedResults(results);
-      });
+      $('placedSearchBtn').addEventListener('click', ()=>doSearch());
+      $('placedQuery').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSearch(); });
 
-      // Add enrollment
       $('addEnrollBtn').addEventListener('click', ()=>{
-        if(!currentUser || (currentUser.role!=='Admin' && currentUser.role!=='Staff')){ showAlert('You do not have permission to add enrollment (sign in as Admin or Staff).'); return; }
-        const entry = {
-          'INDEX NUMBER': $('e_index').value.trim(),
-          'NAME': $('e_name').value.trim(),
-          'GENDER': $('e_gender').value,
-          'PHONE NUMBER': $('e_phone').value.trim(),
-          'RESIDENCE TYPE': $('e_res').value,
-          'PROGRAM': $('e_prog').value.trim(),
-          'CLASS': $('e_class').value.trim(),
+        if(!currentUser || (currentUser.role!=='Admin' && currentUser.role!=='Staff')){ showToast('No permission','error'); return; }
+        const entry = normalizeRecord({
+          'INDEX NUMBER': $('e_index').value.trim(), 'NAME': $('e_name').value.trim(), 'GENDER': $('e_gender').value,
+          'PHONE NUMBER': $('e_phone').value.trim(), 'RESIDENCE TYPE': $('e_res').value, 'COURSE': $('e_prog').value.trim(),
           'DATE ENROLLED': $('e_date').value || new Date().toISOString().slice(0,10)
-        };
-        if(!entry['INDEX NUMBER'] || !entry['NAME']){ showAlert('Index and Name are required'); return; }
-        if(enrollmentData.some(e=>String(e['INDEX NUMBER']||'').trim()===entry['INDEX NUMBER'])){
-          if(!confirm('A record with this index already exists. Add anyway?')) return;
-        }
-        enrollmentData.push(entry);
-        localStorage.setItem('enrollmentData', JSON.stringify(enrollmentData));
-        renderEnrollmentList();
-        $('e_index').value=''; $('e_name').value=''; $('e_phone').value=''; $('e_prog').value=''; $('e_class').value=''; $('e_date').value='';
-        showAlert('Student added locally — offline-safe ✅');
-      });
-
-      // Export XLSX
-      $('exportEnrollBtn').addEventListener('click', ()=>{
-        if(!currentUser || (currentUser.role!=='Admin' && currentUser.role!=='Staff')){ showAlert('You do not have permission to export enrollment (sign in as Admin or Staff).'); return; }
-        if(enrollmentData.length===0){ showAlert('No enrollment records to export'); return; }
-        const ws = XLSX.utils.json_to_sheet(enrollmentData);
-        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Enrollment');
-        XLSX.writeFile(wb, 'enrollment_export.xlsx');
-      });
-
-      // Export PDF (jsPDF)
-      $('exportEnrollPdfBtn').addEventListener('click', ()=>{
-        if(!currentUser || (currentUser.role!=='Admin' && currentUser.role!=='Staff')){ showAlert('You do not have permission to export enrollment (sign in as Admin or Staff).'); return; }
-        if(enrollmentData.length===0){ showAlert('No enrollment records to export'); return; }
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({unit:'pt', format:'a4'});
-        const margin = 40; let y = 60;
-        doc.setFontSize(14); doc.text('AL KHULAFAU Enrollment List', margin, y); y += 24;
-        doc.setFontSize(10);
-        const headers = ['Index','Name','Gender','Phone','Program','Date'];
-        const colWidths = [70,180,60,90,120,70];
-        const startX = margin;
-        // header
-        let x = startX;
-        headers.forEach((h,i)=>{ doc.text(h, x+2, y); x += colWidths[i]; });
-        y += 18;
-        // rows
-        enrollmentData.forEach((r)=>{
-          x = startX; if(y>750){ doc.addPage(); y = 60; }
-          const cells = [r['INDEX NUMBER']||r.index||'', r['NAME']||r.name||'', r['GENDER']||'', r['PHONE NUMBER']||r.phone||'', r['PROGRAM']||r.program||'', r['DATE ENROLLED']||r.date||''];
-          cells.forEach((c,i)=>{ const txt = String(c).slice(0,40); doc.text(txt, x+2, y); x += colWidths[i]; });
-          y += 16;
         });
+        if(!entry['INDEX NUMBER'] || !entry['NAME']){ showToast('Index and Name required','error'); return; }
+        const exists = enrollmentData.some(e=>String(e['INDEX NUMBER']||'').trim()===entry['INDEX NUMBER']);
+        if(exists && !confirm('Record exists. Add anyway?')) return;
+        enrollmentData.push(entry); localStorage.setItem('enrollmentData', JSON.stringify(enrollmentData));
+        renderEnrollmentList(); ['e_index','e_name','e_phone','e_prog','e_class','e_date'].forEach(id=>$(id).value='');
+        showToast('Student added','success');
+      });
+
+      $('exportEnrollBtn').addEventListener('click', ()=>{
+        if(!currentUser || (currentUser.role!=='Admin' && currentUser.role!=='Staff')){ showToast('No permission','error'); return; }
+        if(enrollmentData.length===0){ showToast('Nothing to export'); return; }
+        const ws = XLSX.utils.json_to_sheet(enrollmentData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Enrollment'); XLSX.writeFile(wb, 'enrollment_export.xlsx');
+      });
+
+      $('exportEnrollPdfBtn').addEventListener('click', ()=>{
+        if(!currentUser || (currentUser.role!=='Admin' && currentUser.role!=='Staff')){ showToast('No permission','error'); return; }
+        if(enrollmentData.length===0){ showToast('Nothing to export'); return; }
+        const { jsPDF } = window.jspdf; const doc = new jsPDF({unit:'pt', format:'a4'});
+        const margin = 40; let y = 60; doc.setFontSize(16); doc.text('Alkhulafau Enrollment PWA � Enrollment List', margin, y); y += 18; doc.setFontSize(10);
+        const headers = ['Index','Name','Course','Gender','Region','Status','Date']; const colWidths = [70,160,90,60,70,60,70]; let x = margin;
+        headers.forEach((h,i)=>{ doc.text(h, x+2, y); x += colWidths[i]; }); y += 14;
+        enrollmentData.forEach((r)=>{ x = margin; if(y>750){ doc.addPage(); y = 60; }
+          const cells = [r['INDEX NUMBER']||'', r['NAME']||'', r['COURSE']||r['PROGRAM']||'', r['GENDER']||'', r['REGION']||'', r['STATUS']||'', r['DATE ENROLLED']||''];
+          cells.forEach((c,i)=>{ doc.text(String(c).slice(0,28), x+2, y); x += colWidths[i]; }); y += 12; });
         doc.save('enrollment_export.pdf');
       });
 
-      // Clear local enrollment (admin-only)
       $('clearEnrollBtn').addEventListener('click', ()=>{
-        if(!currentUser || currentUser.role!=='Admin'){ showAlert('Only Admin can clear local enrollment.'); return; }
-        if(!confirm('Clear local enrollment data? This cannot be undone locally.')) return;
-        enrollmentData = []; localStorage.removeItem('enrollmentData'); renderEnrollmentList(); showAlert('Local enrollment cleared.');
+        if(!currentUser || currentUser.role!=='Admin'){ showToast('Admin only','error'); return; }
+        if(!confirm('Clear local enrollment data?')) return;
+        enrollmentData = []; localStorage.removeItem('enrollmentData'); renderEnrollmentList(); showToast('Cleared');
       });
 
-      // Templates
       $('downloadPlacedTemplate').addEventListener('click', ()=>{
-        const sample = [{ 'INDEX NUMBER':'0801061023','NAME':'JOHN DOE','GENDER':'Male','PHONE NUMBER':'0240000000','RESIDENCE TYPE':'Day' }];
+        const sample = [{ 'INDEX NUMBER':'0801061023','NAME':'JOHN DOE','COURSE':'Gen. Arts','GENDER':'Male','REGION':'Ahafo','STATUS':'Placed' }];
         const ws = XLSX.utils.json_to_sheet(sample); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Placed'); XLSX.writeFile(wb,'placed_template.xlsx');
       });
       $('downloadEnrollTemplate').addEventListener('click', ()=>{
-        const sample = [{ 'INDEX NUMBER':'ENR0001','NAME':'JANE DOE','GENDER':'Female','PHONE NUMBER':'0240000000','RESIDENCE TYPE':'Day','PROGRAM':'Gen. Arts','CLASS':'Form 1','DATE ENROLLED':'2025-10-18' }];
+        const sample = [{ 'INDEX NUMBER':'ENR0001','NAME':'JANE DOE','COURSE':'Gen. Arts','GENDER':'Female','REGION':'Greater Accra','STATUS':'Enrolled','DATE ENROLLED':'2025-10-18' }];
         const ws = XLSX.utils.json_to_sheet(sample); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Enrollment'); XLSX.writeFile(wb,'enrollment_template.xlsx');
       });
 
-      // Sign-in modal
       $('signBtn').addEventListener('click', ()=>{
         if(currentUser){ if(confirm('Sign out?')){ currentUser = null; localStorage.removeItem('ak_current_user'); updateUserUI(); } return; }
         $('signinModal').style.display='flex'; $('signin_user').focus();
@@ -495,113 +475,71 @@
       $('signinCancel').addEventListener('click', ()=>{ $('signinModal').style.display='none'; });
       $('signinSubmit').addEventListener('click', ()=>{
         const u = $('signin_user').value.trim(); const p = $('signin_pass').value;
-        if(!u || !p){ showAlert('Enter username and password'); return; }
+        if(!u || !p){ showToast('Enter username & password','error'); return; }
         const found = users.find(x=>x.username===u && x.password===p);
-        if(!found){ showAlert('Invalid credentials'); return; }
+        if(!found){ showToast('Invalid credentials','error'); return; }
         currentUser = { username: found.username, role: found.role };
         localStorage.setItem('ak_current_user', JSON.stringify(currentUser));
-        $('signinModal').style.display='none'; updateUserUI(); showAlert('Signed in as ' + currentUser.username + ' ('+currentUser.role+')');
+        $('signinModal').style.display='none'; updateUserUI(); showToast('Signed in as ' + currentUser.username + ' ('+currentUser.role+')','success');
       });
 
-      // Install prompt handling
-      let deferredPrompt;
-      window.addEventListener('beforeinstallprompt', (e)=>{
-        e.preventDefault(); deferredPrompt = e; $('installBtn').style.display='inline-block';
-      });
-      $('installBtn').addEventListener('click', async ()=>{
-        if(!deferredPrompt) return;
-        deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
-        deferredPrompt = null; $('installBtn').style.display='none';
-      });
+      let deferredPrompt; window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt = e; $('installBtn').style.display='inline-block'; });
+      $('installBtn').addEventListener('click', async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; $('installBtn').style.display='none'; });
 
-      // Download sw.js (present the inline sw source to user as a download)
       $('downloadSwBtn').addEventListener('click', ()=>{
-        const source = inlineSwSource(); // get sw source string
-        const blob = new Blob([source], {type:'text/javascript'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = 'sw.js'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-        showAlert('sw.js downloaded. For best offline reliability, place sw.js at site root and ensure navigator.serviceWorker.register(\"/sw.js\") is used.');
+        const source = inlineSwSource(); const blob = new Blob([source], {type:'text/javascript'}); const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'sw.js'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); showToast('sw.js downloaded');
       });
 
-      // Search enter key
-      $('placedQuery').addEventListener('keydown', (e)=>{ if(e.key==='Enter') $('placedSearchBtn').click(); });
+      try { if('serviceWorker' in navigator){ const swCode = inlineSwSource(); const swBlob = new Blob([swCode], {type:'text/javascript'}); const swUrl = URL.createObjectURL(swBlob);
+        navigator.serviceWorker.register(swUrl).then(()=> setTimeout(()=>URL.revokeObjectURL(swUrl), 2000)).catch(()=> navigator.serviceWorker.register('/sw.js').catch(()=>{})); } } catch(e){}
 
-      // Service Worker registration (best-effort inline)
-      try {
-        if('serviceWorker' in navigator){
-          const swCode = inlineSwSource();
-          // Attempt to register from a blob. NOTE: some browsers disallow blob registrations.
-          const swBlob = new Blob([swCode], {type:'text/javascript'});
-          const swUrl = URL.createObjectURL(swBlob);
-          navigator.serviceWorker.register(swUrl).then(reg=>{
-            console.log('Service worker registered from blob (some browsers block this):', reg);
-            // revoke objectURL after a short delay
-            setTimeout(()=>URL.revokeObjectURL(swUrl), 2000);
-          }).catch(err=>{
-            console.warn('Blob SW registration failed (this can be normal). Trying fallback: register /sw.js', err);
-            // fallback attempt to register '/sw.js' (works if you add a sw.js at root)
-            navigator.serviceWorker.register('/sw.js').then(reg=>console.log('sw registered from /sw.js',reg)).catch(e=>console.warn('fallback /sw.js failed',e));
-          });
-        }
-      } catch(e){ console.warn('SW registration error', e); }
-
-      // final initial render
       renderEnrollmentList(); updateUserUI();
     }
 
-    // Provide the inline sw source (same as the separate sw.js you'd host)
-    function inlineSwSource(){
-      return `const CACHE_NAME = 'ak-student-cache-v1';
-const ASSETS = [
-  '/', location.pathname, location.pathname + 'index.html',
-  // external libs
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-];
-
-self.addEventListener('install', event => {
-  self.skipWaiting();
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS).catch(()=>console.warn('Some assets failed to cache'))));
-});
-
-self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener('fetch', event => {
-  if(event.request.method !== 'GET') return;
-  // network-first for external libs, cache-first for same-origin
-  const url = new URL(event.request.url);
-  if(url.origin !== location.origin){
-    event.respondWith(fetch(event.request).catch(()=>caches.match(event.request)));
-  } else {
-    event.respondWith(caches.match(event.request).then(resp => resp || fetch(event.request).then(r=>{ caches.open(CACHE_NAME).then(c=>c.put(event.request, r.clone())); return r; }).catch(()=>caches.match('/'))));
-  }
-});`;
+    function doSearch(){
+      const q = $('placedQuery').value.trim().toLowerCase();
+      const course = (document.getElementById('filterCourse')?.value||'').toLowerCase();
+      const gender = (document.getElementById('filterGender')?.value||'').toLowerCase();
+      const region = (document.getElementById('filterRegion')?.value||'').toLowerCase();
+      const status = (document.getElementById('filterStatus')?.value||'').toLowerCase();
+      const results = placedData.filter(r=>{
+        const idx = String(r['INDEX NUMBER']||'').toLowerCase();
+        const name = String(r['NAME']||'').toLowerCase();
+        const matchQ = !q || idx.includes(q) || name.includes(q);
+        const matchCourse = !course || String(r['COURSE']||'').toLowerCase().includes(course);
+        const matchGender = !gender || String(r['GENDER']||'').toLowerCase()===gender;
+        const matchRegion = !region || String(r['REGION']||'').toLowerCase().includes(region);
+        const matchStatus = !status || String(r['STATUS']||'').toLowerCase().includes(status);
+        return matchQ && matchCourse && matchGender && matchRegion && matchStatus;
+      });
+      renderPlacedResults(results);
     }
 
-    // boot
+    function initManifest(){
+      const manifest = { name: 'Alkhulafau Enrollment PWA', short_name: 'Alkhulafau', start_url: '/', display: 'standalone', theme_color: '#006D77', background_color: '#FFFFFF',
+        icons: [ { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' } ],
+        shortcuts: [ { name: 'Search', url: '/#/search' }, { name: 'Enrollment', url: '/#/enroll' } ] };
+      const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'}); const url = URL.createObjectURL(blob);
+      let link = document.querySelector('link[rel="manifest"]'); if(!link){ link = document.createElement('link'); link.rel='manifest'; document.head.appendChild(link); }
+      link.href = url; let theme = document.querySelector('meta[name="theme-color"]'); if(!theme){ theme = document.createElement('meta'); theme.name='theme-color'; document.head.appendChild(theme); } theme.setAttribute('content','#006D77');
+    }
+
+    function inlineSwSource(){
+      return `const CACHE_NAME = 'alkhulafau-pwa-v1';
+const ASSETS = [ '/', '/index.html', '/manifest.json', 'https://cdn.tailwindcss.com', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js' ];
+self.addEventListener('install', e=>{ self.skipWaiting(); e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS).catch(()=>{}))); });
+self.addEventListener('activate', e=>{ e.waitUntil(self.clients.claim()); });
+self.addEventListener('fetch', e=>{ if(e.request.method!=='GET') return; const url=new URL(e.request.url); if(url.origin!==location.origin){ e.respondWith(fetch(e.request).catch(()=>caches.match(e.request))); } else { e.respondWith(caches.match(e.request).then(r=> r || fetch(e.request).then(resp=>{ caches.open(CACHE_NAME).then(c=>c.put(e.request, resp.clone())); return resp; }).catch(()=>caches.match('/')))); } });`;
+    }
+
     window.addEventListener('DOMContentLoaded', setup);
   })();
   </script>
 
   <!--
-    If you deploy this to Vercel for stable offline usage, please also create a small /sw.js file at the site root with the same content as the inline service worker above.
-    Copy-paste the content between the backticks from the inlineSwSource() function (or click "Download sw.js" in the Manage tab) and put it in /sw.js in your project root so navigator.serviceWorker.register('/sw.js') will reliably register across browsers.
-
-    Example sw.js (same as inline):
-    ------------------------------------------------------
-    const CACHE_NAME = 'ak-student-cache-v1';
-    const ASSETS = [ '/', '/index.html', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', ... ];
-    self.addEventListener('install', event => { ... });
-    self.addEventListener('activate', event => { ... });
-    self.addEventListener('fetch', event => { ... });
-    ------------------------------------------------------
-
-    Known limitation: PDF parsing here uses pdf.js text extraction heuristics; scanned PDFs require OCR (Tesseract.js) — tell me if you'd like OCR added.
+    For best offline behavior on Vercel, add a root /sw.js with the same content as inlineSwSource() and provide /icons assets.
+    OCR fallback via Tesseract.js is enabled when pdf.js yields no text.
   -->
 
 </body>
