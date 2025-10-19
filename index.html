@@ -1,611 +1,608 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AL KHULAFAU 2025 — School Management (Dashboard)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AL KHULAFAU 2025 — Student Search & Enrollment (Single-file PWA)</title>
 
-  <!-- Libraries -->
+  <!-- External libs (CDN) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+  <meta name="theme-color" content="#5563DE">
   <style>
     :root{--bg1:#74ABE2;--bg2:#5563DE;--card:#ffffff}
     *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial; margin:0; min-height:100vh; background:linear-gradient(135deg,var(--bg1),var(--bg2)); display:flex; align-items:center; justify-content:center; padding:20px}
-    .app{width:100%;max-width:1200px;background:var(--card);border-radius:14px;padding:18px;box-shadow:0 12px 40px rgba(12,20,40,0.18)}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial; margin:0; min-height:100vh; background:linear-gradient(135deg,var(--bg1),var(--bg2)); display:flex; align-items:center; justify-content:center; padding:24px}
+    .app{width:100%;max-width:1100px;background:var(--card);border-radius:16px;padding:20px;box-shadow:0 12px 40px rgba(12,20,40,0.18)}
     .header{display:flex;align-items:center;justify-content:space-between;gap:12px}
     h1{margin:0;font-size:20px}
-    .tabs{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+    .tabs{display:flex;gap:8px;margin-top:14px}
     .tab{padding:8px 12px;border-radius:10px;border:1px solid #e6e9ef;background:#f7f8fb;cursor:pointer}
     .tab.active{background:linear-gradient(90deg,var(--bg2),#3b49b7);color:#fff;border:none}
-    .content{margin-top:14px}
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    .col{flex:1;min-width:240px}
-    input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #e3e6ee}
+    .content{margin-top:18px}
+    .row{display:flex;gap:12px}
+    .col{flex:1}
+    input[type=text],select,input[type=file],input[type=date],input[type=password],input{width:100%;padding:10px;border-radius:8px;border:1px solid #e3e6ee}
     label{display:block;margin-bottom:6px;font-size:13px}
     .btn{display:inline-block;padding:10px 14px;border-radius:10px;border:none;background:var(--bg2);color:#fff;cursor:pointer}
     .btn.secondary{background:#2ecc71}
+    .btn.ghost{background:transparent;color:#333;border:1px solid #e6e9ef}
+    .btn.warn{background:#e74c3c}
     .panel{margin-top:12px;padding:14px;border-radius:10px;background:#f8f9fc;border:1px solid #eef2ff}
     table{width:100%;border-collapse:collapse;margin-top:8px}
     th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;font-size:13px}
     .small{font-size:12px;color:#666}
-    .card{padding:12px;border-radius:8px;background:#fff;border:1px solid #eef2ff}
-    .stat-grid{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
-    .stat{flex:1;min-width:160px;padding:10px;border-radius:8px;background:#fff;border:1px solid #eef2ff}
-    .warning{background:#fff3cd;color:#856404;padding:8px;border-radius:6px;margin-top:10px}
+    .result-card{padding:10px;border-radius:8px;background:#fff;border:1px solid #eef2ff}
+    @media(max-width:720px){.row{flex-direction:column}}
+    .note{font-size:13px;color:#444;margin-top:8px}
+    /* Modal */
+    .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);z-index:60}
+    .modal-card{background:#fff;padding:20px;border-radius:12px;width:420px;max-width:92%}
     .muted{color:#666;font-size:13px}
-    .actions button{margin-right:6px}
-    @media(max-width:880px){ .row{flex-direction:column} .stat-grid{flex-direction:column} }
+    .role-badge{padding:6px 8px;border-radius:8px;background:#f1f3ff;color:#2b3bfb;font-weight:600}
+    .disabled{opacity:0.45;pointer-events:none}
+    .flex-between{display:flex;justify-content:space-between;align-items:center}
+    .top-actions{display:flex;gap:8px}
+    .spinner{width:18px;height:18px;border-radius:50%;border:3px solid rgba(255,255,255,0.25);border-top-color:#fff;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
   <div class="app" role="application">
     <div class="header">
       <div>
-        <h1>AL KHULAFAU 2025 — School Management</h1>
-        <div class="muted">Persistent local Excel uploads · Dashboard · Export · Offline-safe</div>
+        <h1>AL KHULAFAU 2025 — Student Tool</h1>
+        <div class="small muted">Single-file PWA · Excel & PDF import · Export XLSX/PDF · Offline-capable</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <div id="installWrapper" style="display:flex;align-items:center;gap:8px">
-          <button class="btn" id="installBtn" style="display:none">Install App</button>
-        </div>
-        <button class="btn secondary" id="downloadSwBtn">Download sw.js</button>
+        <div id="currentUser" class="muted">Not signed in</div>
+        <button class="btn ghost" id="installBtn" style="display:none">Install</button>
+        <button class="btn" id="signBtn">Sign In</button>
       </div>
     </div>
 
     <div class="tabs" role="tablist">
-      <div class="tab active" data-tab="dashboard">📊 Dashboard</div>
-      <div class="tab" data-tab="search">🔍 Search</div>
-      <div class="tab" data-tab="enroll">📝 Enroll</div>
+      <div class="tab active" data-tab="search">🔍 Search Placed</div>
+      <div class="tab" data-tab="enroll">📝 Enrollment</div>
       <div class="tab" data-tab="manage">⚙️ Manage</div>
     </div>
 
     <div class="content">
 
-      <!-- DASHBOARD -->
-      <div id="dashboard" class="tab-content">
-        <div class="panel">
-          <h3 style="margin:0 0 8px 0">Dashboard</h3>
-
-          <div class="stat-grid">
-            <div class="stat">
-              <div class="muted">Total Placed Students</div>
-              <div id="statPlaced" style="font-size:20px;font-weight:700">0</div>
-            </div>
-            <div class="stat">
-              <div class="muted">Total Enrolled Students</div>
-              <div id="statEnrolled" style="font-size:20px;font-weight:700">0</div>
-            </div>
-            <div class="stat">
-              <div class="muted">Last Placed Upload</div>
-              <div id="metaPlaced" class="muted">—</div>
-            </div>
-            <div class="stat">
-              <div class="muted">Last Enrollment Upload/Change</div>
-              <div id="metaEnroll" class="muted">—</div>
-            </div>
-          </div>
-
-          <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap">
-            <div style="flex:1;min-width:300px" class="card">
-              <canvas id="barChart" height="180"></canvas>
-            </div>
-            <div style="flex:1;min-width:260px" class="card">
-              <canvas id="pieChart" height="180"></canvas>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- SEARCH -->
-      <div id="search" class="tab-content" style="display:none">
+      <!-- SEARCH TAB -->
+      <div id="search" class="tab-content">
         <div class="panel">
           <div class="row">
             <div class="col">
-              <label>Load Placed or Enrollment Excel (will persist)</label>
-              <input type="file" id="uploadAnyFile" accept=".xlsx" />
+              <label>Load Placed Candidates (Excel or PDF)</label>
+              <input type="file" id="placedFile" accept=".xlsx,.xls,.pdf" />
             </div>
             <div class="col">
               <label>Search by Index or Name</label>
-              <input type="text" id="searchQuery" placeholder="e.g. 0801061023 or 'ABDUL'" />
+              <input type="text" id="placedQuery" placeholder="e.g. 0801061023 or ABDUL" />
             </div>
             <div style="display:flex;align-items:flex-end;gap:8px">
-              <button class="btn" id="doSearchBtn">Search</button>
+              <button class="btn" id="placedSearchBtn">Search</button>
             </div>
           </div>
 
-          <div id="searchResults" style="margin-top:12px"></div>
+          <div id="placedResults" style="margin-top:12px"></div>
         </div>
       </div>
 
-      <!-- ENROLL -->
+      <!-- ENROLLMENT TAB -->
       <div id="enroll" class="tab-content" style="display:none">
         <div class="panel">
-          <h3 style="margin:0 0 8px 0">Enroll Student (adds to current Enrollment dataset)</h3>
           <div class="row">
-            <div class="col"><label>Index Number</label><input type="text" id="e_index"></div>
-            <div class="col"><label>Name</label><input type="text" id="e_name"></div>
-            <div class="col"><label>Gender</label><select id="e_gender"><option>Male</option><option>Female</option><option>Other</option></select></div>
-          </div>
-          <div class="row" style="margin-top:8px">
-            <div class="col"><label>Program</label><input id="e_prog"></div>
-            <div class="col"><label>Class</label><input id="e_class"></div>
-            <div class="col"><label>Phone</label><input id="e_phone"></div>
-          </div>
-          <div style="margin-top:10px;display:flex;gap:8px">
-            <button class="btn" id="addEnrollmentBtn">Add & Save</button>
-            <button class="btn secondary" id="exportEnrollmentBtn">Export Enrollment</button>
+            <div class="col">
+              <label>Load Enrollment (Excel or PDF)</label>
+              <input type="file" id="enrollFile" accept=".xlsx,.xls,.pdf" />
+            </div>
+            <div class="col">
+              <label>Current Enrollment Count</label>
+              <div id="enrollCount" class="result-card">0</div>
+            </div>
           </div>
 
-          <div id="enrollListBox" style="margin-top:12px"></div>
+          <hr style="margin:12px 0" />
+
+          <div style="margin-top:8px">
+            <h3 style="margin:0 0 8px 0">New Student Enrollment</h3>
+            <div class="row">
+              <div class="col">
+                <label>Index Number</label>
+                <input type="text" id="e_index" />
+              </div>
+              <div class="col">
+                <label>Name</label>
+                <input type="text" id="e_name" />
+              </div>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <div class="col">
+                <label>Gender</label>
+                <select id="e_gender">
+                  <option>Male</option>
+                  <option>Female</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="col">
+                <label>Phone Number</label>
+                <input type="text" id="e_phone" />
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:8px">
+              <div class="col">
+                <label>Residence Type</label>
+                <select id="e_res">
+                  <option>Day</option>
+                  <option>Boarding</option>
+                </select>
+              </div>
+              <div class="col">
+                <label>Program</label>
+                <input type="text" id="e_prog" placeholder="e.g. Gen. Arts / Agric / Bus" />
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:8px">
+              <div class="col">
+                <label>Class / Form</label>
+                <input type="text" id="e_class" placeholder="e.g. Form 1" />
+              </div>
+              <div class="col">
+                <label>Date Enrolled</label>
+                <input type="date" id="e_date" />
+              </div>
+            </div>
+
+            <div style="margin-top:12px; display:flex; gap:8px">
+              <button class="btn" id="addEnrollBtn">Add to Enrollment (offline-safe)</button>
+              <button class="btn" id="exportEnrollBtn">Export Enrollment XLSX</button>
+              <button class="btn secondary" id="exportEnrollPdfBtn">Export Enrollment PDF</button>
+            </div>
+
+            <div id="enrollList" style="margin-top:12px"></div>
+          </div>
         </div>
       </div>
 
-      <!-- MANAGE -->
+      <!-- MANAGE TAB -->
       <div id="manage" class="tab-content" style="display:none">
         <div class="panel">
-          <h3 style="margin:0 0 8px 0">Manage Data & Templates</h3>
+          <h3 style="margin-top:0">Manage Data</h3>
           <div class="row">
             <div class="col">
-              <label>Upload Placed Excel (persists & merges)</label>
-              <input type="file" id="uploadPlacedFile" accept=".xlsx" />
+              <label>Clear in-memory enrollment (careful)</label>
+              <button class="btn warn" id="clearEnrollBtn">Clear Local Enrollment</button>
             </div>
             <div class="col">
-              <label>Upload Enrollment Excel (persists & merges)</label>
-              <input type="file" id="uploadEnrollmentFile" accept=".xlsx" />
-            </div>
-          </div>
-
-          <div style="margin-top:12px" class="row">
-            <div class="col">
-              <label>Drop Data</label>
+              <label>Download sample templates</label>
               <div style="display:flex;gap:8px">
-                <button class="btn" id="dropPlacedBtn">Drop Placed Data</button>
-                <button class="btn" id="dropEnrollBtn">Drop Enrollment Data</button>
-                <button class="btn secondary" id="dropAllBtn">Drop All</button>
-              </div>
-            </div>
-            <div class="col">
-              <label>Exports</label>
-              <div style="display:flex;gap:8px">
-                <button class="btn" id="exportPlacedBtn">Export Placed</button>
-                <button class="btn" id="exportEnrollBtn">Export Enrollment</button>
+                <button class="btn" id="downloadPlacedTemplate">Placed Template</button>
+                <button class="btn" id="downloadEnrollTemplate">Enrollment Template</button>
               </div>
             </div>
           </div>
 
-          <div style="margin-top:12px" class="row">
-            <div class="col">
-              <label>Storage</label>
-              <div id="storageInfo" class="card muted">—</div>
-            </div>
-            <div class="col">
-              <label>Templates</label>
-              <div style="display:flex;gap:8px">
-                <button class="btn" id="downloadTemplateBtn">Download Template</button>
-              </div>
-            </div>
+          <div class="note" style="margin-top:12px">
+            This is a single-file PWA. Service-worker registration is attempted inline (best-effort). For maximum compatibility, when you deploy to Vercel add a separate <code>/sw.js</code> file (I include the same sw source at the end of this file in a commented block you can copy).
           </div>
+
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+            <button class="btn ghost" id="downloadSwBtn">Download sw.js (copy)</button>
+            <div class="muted">&nbsp;</div>
+          </div>
+
         </div>
       </div>
 
     </div>
   </div>
 
+  <!-- Sign-in modal -->
+  <div id="signinModal" class="modal" style="display:none">
+    <div class="modal-card">
+      <h3 style="margin-top:0">Sign In</h3>
+      <div style="margin-bottom:8px" class="muted">Use default accounts to test: <strong>admin/admin</strong> (Admin), <strong>staff/staff</strong> (Staff), <strong>viewer/viewer</strong> (Viewer)</div>
+      <label>Username</label>
+      <input type="text" id="signin_user" />
+      <label style="margin-top:8px">Password</label>
+      <input type="password" id="signin_pass" />
+      <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" id="signinSubmit">Sign In</button>
+        <button class="btn secondary" id="signinCancel">Cancel</button>
+      </div>
+      <div style="margin-top:8px" class="muted">Role-based permissions: Admin (add/edit/clear/export), Staff (add/export), Viewer (search only).</div>
+    </div>
+  </div>
+
   <script>
-    /* ---------------------------
-       Keys & metadata helpers
-       --------------------------- */
-    const KEY_PLACED = 'ak_placed_data';
-    const KEY_PLACED_META = 'ak_placed_meta';
-    const KEY_ENROLL = 'ak_enroll_data';
-    const KEY_ENROLL_META = 'ak_enroll_meta';
+  /**********************************************************
+   * Single-file PWA app script
+   * - uses XLSX (global XLSX), PDF.js (pdfjsLib), jsPDF (window.jspdf)
+   * - creates manifest blob (installable)
+   * - creates a best-effort service worker blob and tries to register it
+   **********************************************************/
+  (function(){
+    // --- state ---
+    let placedData = [];
+    let enrollmentData = JSON.parse(localStorage.getItem('enrollmentData') || '[]');
+    let currentUser = JSON.parse(localStorage.getItem('ak_current_user') || 'null');
 
-    // default audit identity for now
-    const DEFAULT_EDITOR = 'System Admin';
+    const defaultUsers = [
+      {username:'admin', password:'admin', role:'Admin'},
+      {username:'staff', password:'staff', role:'Staff'},
+      {username:'viewer', password:'viewer', role:'Viewer'}
+    ];
+    let users = JSON.parse(localStorage.getItem('ak_users') || 'null');
+    if(!users){ users = defaultUsers; localStorage.setItem('ak_users', JSON.stringify(users)); }
 
-    function nowISO(){ return new Date().toISOString(); }
-    function savePlaced(data){
-      localStorage.setItem(KEY_PLACED, JSON.stringify(data));
-      localStorage.setItem(KEY_PLACED_META, JSON.stringify({ lastUpload: nowISO(), count: data.length }));
-    }
-    function saveEnroll(data){
-      localStorage.setItem(KEY_ENROLL, JSON.stringify(data));
-      localStorage.setItem(KEY_ENROLL_META, JSON.stringify({ lastUpload: nowISO(), count: data.length }));
-    }
-    function loadPlaced(){ return JSON.parse(localStorage.getItem(KEY_PLACED) || '[]'); }
-    function loadEnroll(){ return JSON.parse(localStorage.getItem(KEY_ENROLL) || '[]'); }
-    function loadPlacedMeta(){ return JSON.parse(localStorage.getItem(KEY_PLACED_META) || 'null'); }
-    function loadEnrollMeta(){ return JSON.parse(localStorage.getItem(KEY_ENROLL_META) || 'null'); }
+    // pdf.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js';
 
-    // global in-memory view
-    let placed = loadPlaced();
-    let enrolled = loadEnroll();
-
-    /* ---------------------------
-       UI references
-       --------------------------- */
-    const statPlacedEl = document.getElementById('statPlaced');
-    const statEnrolledEl = document.getElementById('statEnrolled');
-    const metaPlacedEl = document.getElementById('metaPlaced');
-    const metaEnrollEl = document.getElementById('metaEnroll');
-    const storageInfoEl = document.getElementById('storageInfo');
-
-    const searchResultsEl = document.getElementById('searchResults');
-    const enrollListBox = document.getElementById('enrollListBox');
-
-    /* ---------------------------
-       Charts
-       --------------------------- */
-    const barCtx = document.getElementById('barChart').getContext('2d');
-    const pieCtx = document.getElementById('pieChart').getContext('2d');
-    let barChart = new Chart(barCtx, {
-      type: 'bar',
-      data: { labels: ['Placed','Enrolled'], datasets: [{ label: 'Students', data: [0,0], backgroundColor: ['#5563DE','#2ecc71'] }] },
-      options: { responsive: true, plugins:{legend:{display:false}} }
-    });
-    let pieChart = new Chart(pieCtx, {
-      type: 'pie',
-      data: { labels: ['Male','Female','Other'], datasets:[{ data:[0,0,0], backgroundColor:['#3b82f6','#fb7185','#f59e0b'] }] },
-      options:{responsive:true}
-    });
-
-    /* ---------------------------
-       Dashboard update
-       --------------------------- */
-    function updateDashboard(){
-      const placedCount = (placed || []).length;
-      const enrollCount = (enrolled || []).length;
-      statPlacedEl.textContent = placedCount;
-      statEnrolledEl.textContent = enrollCount;
-
-      const pMeta = loadPlacedMeta();
-      const eMeta = loadEnrollMeta();
-      metaPlacedEl.textContent = pMeta ? `${new Date(pMeta.lastUpload).toLocaleString()} (${pMeta.count})` : '—';
-      metaEnrollEl.textContent = eMeta ? `${new Date(eMeta.lastUpload).toLocaleString()} (${eMeta.count})` : '—';
-
-      // update charts
-      barChart.data.datasets[0].data = [placedCount, enrollCount];
-      barChart.update();
-
-      // gender pie across both sets (prefer enrollment first, then placed)
-      const combined = [...placed, ...enrolled];
-      const genders = { Male:0, Female:0, Other:0 };
-      combined.forEach(r=>{
-        const g = String(r['GENDER']||r['gender']||'').trim().toLowerCase();
-        if(g.startsWith('m')) genders.Male++;
-        else if(g.startsWith('f')) genders.Female++;
-        else genders.Other++;
-      });
-      pieChart.data.datasets[0].data = [genders.Male,genders.Female,genders.Other];
-      pieChart.update();
-
-      // storage usage
-      const used = (localStorageToSize()).toLocaleString();
-      storageInfoEl.textContent = `${used} bytes used in localStorage`;
-    }
-
-    function localStorageToSize(){
-      // rough bytes used by localStorage (sum of key+value lengths)
-      let total = 0;
-      for(let i=0;i<localStorage.length;i++){
-        const k = localStorage.key(i);
-        const v = localStorage.getItem(k);
-        total += (k.length + v.length);
-      }
-      return total;
-    }
-
-    /* ---------------------------
-       Render helpers
-       --------------------------- */
-    function renderSearchResults(list){
-      if(!list || list.length===0){ searchResultsEl.innerHTML = '<div class="card">No results.</div>'; return; }
-      let html = '<table><thead><tr><th>Index</th><th>Name</th><th>Gender</th><th>Program</th><th>Phone</th></tr></thead><tbody>';
-      list.forEach(r=>{
-        html += `<tr><td>${escapeHtml(r['INDEX NUMBER']||r['Index']||'')}</td><td>${escapeHtml(r['NAME']||r['Name']||'')}</td><td>${escapeHtml(r['GENDER']||r['Gender']||'')}</td><td>${escapeHtml(r['PROGRAM']||r['Program']||'')}</td><td>${escapeHtml(r['PHONE NUMBER']||r['Phone']||'')}</td></tr>`;
-      });
-      html += '</tbody></table>';
-      searchResultsEl.innerHTML = html;
-    }
-
+    // --- helpers ---
+    const $ = id => document.getElementById(id);
     function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function showAlert(msg){ alert(msg); }
 
-    function renderEnrollList(){
-      if(!enrolled || enrolled.length===0){ enrollListBox.innerHTML = '<div class="card small">No enrolled students yet.</div>'; updateDashboard(); return; }
-      let html = '<table><thead><tr><th>Index</th><th>Name</th><th>Program</th><th>Class</th><th>Last Edited</th><th>Actions</th></tr></thead><tbody>';
-      enrolled.forEach((r,i)=>{
-        html += `<tr>
-          <td>${escapeHtml(r['INDEX NUMBER'])}</td>
-          <td>${escapeHtml(r['NAME'])}</td>
-          <td>${escapeHtml(r['PROGRAM']||'')}</td>
-          <td>${escapeHtml(r['CLASS']||'')}</td>
-          <td>${escapeHtml(r['lastEditedBy']||'') || escapeHtml(r['lastModified']||'')}</td>
-          <td class="actions">
-            <button class="btn" onclick="editEnroll(${i})">Edit</button>
-            <button class="btn secondary" onclick="deleteEnroll(${i})">Delete</button>
-          </td>
-        </tr>`;
-      });
-      html += '</tbody></table>';
-      enrollListBox.innerHTML = html;
-      updateDashboard();
+    function updateUserUI(){
+      const el = $('currentUser');
+      const signBtn = $('signBtn');
+      if(currentUser){ el.innerHTML = `${escapeHtml(currentUser.username)} <span class="role-badge">${escapeHtml(currentUser.role)}</span>`; signBtn.textContent='Sign Out'; }
+      else { el.innerText = 'Not signed in'; signBtn.textContent='Sign In'; }
+      applyPermissions();
     }
 
-    /* ---------------------------
-       Upload + Merge + Dedup
-       --------------------------- */
-    function mergeInto(targetArray, incoming, key='INDEX NUMBER'){
-      // returns number added
+    function applyPermissions(){
+      const role = currentUser ? currentUser.role : 'Viewer';
+      $('addEnrollBtn').disabled = !(role==='Admin' || role==='Staff');
+      $('exportEnrollBtn').disabled = !(role==='Admin' || role==='Staff');
+      $('exportEnrollPdfBtn').disabled = !(role==='Admin' || role==='Staff');
+      $('clearEnrollBtn').disabled = !(role==='Admin');
+    }
+
+    // Rendering
+    function renderPlacedResults(rows){
+      const out = $('placedResults');
+      if(!rows || rows.length===0){ out.innerHTML = '<div class="result-card">No results.</div>'; return; }
+      let html = '<table><thead><tr><th>Index</th><th>Name</th><th>Gender</th><th>Phone</th><th>Res</th></tr></thead><tbody>';
+      rows.slice(0,500).forEach(r=>{
+        html += `<tr><td>${escapeHtml(r['INDEX NUMBER']||r.index||'')}</td><td>${escapeHtml(r['NAME']||r.name||'')}</td><td>${escapeHtml(r['GENDER']||'')}</td><td>${escapeHtml(r['PHONE NUMBER']||r.phone||'')}</td><td>${escapeHtml(r['RESIDENCE TYPE']||r.res||'')}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      if(rows.length>500) html += `<div class="small">Showing first 500 of ${rows.length} matches</div>`;
+      out.innerHTML = html;
+    }
+
+    function renderEnrollmentList(){
+      $('enrollCount').innerText = enrollmentData.length;
+      const el = $('enrollList');
+      if(enrollmentData.length===0){ el.innerHTML = '<div class="result-card small">No enrollment records stored locally.</div>'; return; }
+      let html = '<table><thead><tr><th>Index</th><th>Name</th><th>Gender</th><th>Phone</th><th>Program</th><th>Date</th></tr></thead><tbody>';
+      enrollmentData.forEach(r=>{
+        html += `<tr><td>${escapeHtml(r['INDEX NUMBER']||r.index||'')}</td><td>${escapeHtml(r['NAME']||r.name||'')}</td><td>${escapeHtml(r['GENDER']||'')}</td><td>${escapeHtml(r['PHONE NUMBER']||r.phone||'')}</td><td>${escapeHtml(r['PROGRAM']||r.program||'')}</td><td>${escapeHtml(r['DATE ENROLLED']||r.date||'')}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      el.innerHTML = html;
+    }
+
+    // --- File readers ---
+    async function readExcelFile(file){
+      const arr = await file.arrayBuffer();
+      const wb = XLSX.read(arr, {type:'array'});
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      return XLSX.utils.sheet_to_json(sheet, {defval:''});
+    }
+
+    async function readPdfFile(file){
+      // Basic text extraction and heuristic parsing.
+      const data = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({data}).promise;
+      const pagesText = [];
+      for(let p=1;p<=pdf.numPages;p++){
+        const page = await pdf.getPage(p);
+        const txt = await page.getTextContent();
+        pagesText.push(txt.items.map(i=>i.str).join(' '));
+      }
+      const combined = pagesText.join('\n');
+      // split lines and attempt to detect rows containing index numbers of 6-12 digits
+      const lines = combined.split(/[\r\n]+/).map(l=>l.trim()).filter(Boolean);
+      const rows = [];
+      for(const line of lines){
+        const idxMatch = line.match(/\b\d{6,12}\b/);
+        if(idxMatch){
+          // split by multiple spaces or common separators
+          let parts = line.split(/\s{2,}|,|\|/).map(s=>s.trim()).filter(Boolean);
+          if(parts.length < 3){
+            const tokens = line.split(/\s+/).filter(Boolean);
+            const idx = tokens.find(t=>/^\d{6,12}$/.test(t));
+            if(idx){
+              const i = tokens.indexOf(idx);
+              const name = tokens.slice(i+1, i+4).join(' ');
+              rows.push({'INDEX NUMBER': idx, 'NAME': name});
+            }
+          } else {
+            const idx = parts.find(p=>/^\d{6,12}$/.test(p)) || parts[0];
+            const name = parts.find(p=>!/^\d{6,12}$/.test(p)) || parts[1] || '';
+            rows.push({'INDEX NUMBER': idx, 'NAME': name});
+          }
+        }
+      }
+      return rows;
+    }
+
+    // --- Merge helper ---
+    function mergeIntoEnrollment(loaded){
       let added = 0;
-      const exists = new Set(targetArray.map(x=>String(x[key]||'').trim()));
-      incoming.forEach(rec=>{
-        const id = String(rec[key]||'').trim();
-        if(!id) return;
-        if(!exists.has(id)){
-          // enrich audit fields
-          rec.lastEditedBy = rec.lastEditedBy || DEFAULT_EDITOR;
-          rec.lastModified = rec.lastModified || nowISO();
-          targetArray.push(rec);
-          exists.add(id);
+      loaded.forEach(rec=>{
+        const idx = String(rec['INDEX NUMBER']||rec.index||'').trim();
+        if(!idx) return;
+        const dup = enrollmentData.find(x=>String(x['INDEX NUMBER']||x.index||'').trim()===idx);
+        if(!dup){
+          const norm = {
+            'INDEX NUMBER': idx,
+            'NAME': rec['NAME']||rec.name||'',
+            'GENDER': rec['GENDER']||rec.gender||'',
+            'PHONE NUMBER': rec['PHONE NUMBER']||rec.phone||'',
+            'RESIDENCE TYPE': rec['RESIDENCE TYPE']||rec.res||'',
+            'PROGRAM': rec['PROGRAM']||rec.program||'',
+            'CLASS': rec['CLASS']||rec.class||'',
+            'DATE ENROLLED': rec['DATE ENROLLED']||rec.date||new Date().toISOString().slice(0,10)
+          };
+          enrollmentData.push(norm);
           added++;
         }
       });
+      localStorage.setItem('enrollmentData', JSON.stringify(enrollmentData));
+      renderEnrollmentList();
       return added;
     }
 
-    async function handleExcelFile(file){
-      const data = await file.arrayBuffer();
-      const wb = XLSX.read(data, { type: 'array' });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      return XLSX.utils.sheet_to_json(sheet);
+    // --- Wiring UI ---
+    function setup(){
+      // Tabs
+      document.querySelectorAll('.tab').forEach(t=>{
+        t.addEventListener('click', ()=>{
+          document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+          t.classList.add('active');
+          document.querySelectorAll('.tab-content').forEach(c=>c.style.display='none');
+          document.getElementById(t.dataset.tab).style.display='block';
+        });
+      });
+
+      // Placed file input
+      $('placedFile').addEventListener('change', async (e)=>{
+        const f = e.target.files[0]; if(!f) return;
+        try{
+          let loaded = [];
+          if(/\.pdf$/i.test(f.name)) loaded = await readPdfFile(f);
+          else loaded = await readExcelFile(f);
+          placedData = placedData.concat(loaded);
+          showAlert('Placed candidates loaded: ' + loaded.length);
+        } catch(err){
+          console.error(err); showAlert('Error loading placed file: ' + (err.message||err));
+        }
+      });
+
+      // Enroll file input
+      $('enrollFile').addEventListener('change', async (e)=>{
+        const f = e.target.files[0]; if(!f) return;
+        try{
+          let loaded = [];
+          if(/\.pdf$/i.test(f.name)) loaded = await readPdfFile(f);
+          else loaded = await readExcelFile(f);
+          const added = mergeIntoEnrollment(loaded);
+          showAlert('Enrollment sheet loaded and appended — new records: ' + added);
+        } catch(err){
+          console.error(err); showAlert('Error loading enrollment file: ' + (err.message||err));
+        }
+      });
+
+      // Search
+      $('placedSearchBtn').addEventListener('click', ()=>{
+        const q = $('placedQuery').value.trim().toLowerCase();
+        if(!q){ showAlert('Enter a query'); return; }
+        const results = placedData.filter(r=> (String(r['INDEX NUMBER']||r.index||'').toLowerCase().includes(q) || String(r['NAME']||r.name||'').toLowerCase().includes(q)) );
+        renderPlacedResults(results);
+      });
+
+      // Add enrollment
+      $('addEnrollBtn').addEventListener('click', ()=>{
+        if(!currentUser || (currentUser.role!=='Admin' && currentUser.role!=='Staff')){ showAlert('You do not have permission to add enrollment (sign in as Admin or Staff).'); return; }
+        const entry = {
+          'INDEX NUMBER': $('e_index').value.trim(),
+          'NAME': $('e_name').value.trim(),
+          'GENDER': $('e_gender').value,
+          'PHONE NUMBER': $('e_phone').value.trim(),
+          'RESIDENCE TYPE': $('e_res').value,
+          'PROGRAM': $('e_prog').value.trim(),
+          'CLASS': $('e_class').value.trim(),
+          'DATE ENROLLED': $('e_date').value || new Date().toISOString().slice(0,10)
+        };
+        if(!entry['INDEX NUMBER'] || !entry['NAME']){ showAlert('Index and Name are required'); return; }
+        if(enrollmentData.some(e=>String(e['INDEX NUMBER']||'').trim()===entry['INDEX NUMBER'])){
+          if(!confirm('A record with this index already exists. Add anyway?')) return;
+        }
+        enrollmentData.push(entry);
+        localStorage.setItem('enrollmentData', JSON.stringify(enrollmentData));
+        renderEnrollmentList();
+        $('e_index').value=''; $('e_name').value=''; $('e_phone').value=''; $('e_prog').value=''; $('e_class').value=''; $('e_date').value='';
+        showAlert('Student added locally — offline-safe ✅');
+      });
+
+      // Export XLSX
+      $('exportEnrollBtn').addEventListener('click', ()=>{
+        if(!currentUser || (currentUser.role!=='Admin' && currentUser.role!=='Staff')){ showAlert('You do not have permission to export enrollment (sign in as Admin or Staff).'); return; }
+        if(enrollmentData.length===0){ showAlert('No enrollment records to export'); return; }
+        const ws = XLSX.utils.json_to_sheet(enrollmentData);
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Enrollment');
+        XLSX.writeFile(wb, 'enrollment_export.xlsx');
+      });
+
+      // Export PDF (jsPDF)
+      $('exportEnrollPdfBtn').addEventListener('click', ()=>{
+        if(!currentUser || (currentUser.role!=='Admin' && currentUser.role!=='Staff')){ showAlert('You do not have permission to export enrollment (sign in as Admin or Staff).'); return; }
+        if(enrollmentData.length===0){ showAlert('No enrollment records to export'); return; }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({unit:'pt', format:'a4'});
+        const margin = 40; let y = 60;
+        doc.setFontSize(14); doc.text('AL KHULAFAU Enrollment List', margin, y); y += 24;
+        doc.setFontSize(10);
+        const headers = ['Index','Name','Gender','Phone','Program','Date'];
+        const colWidths = [70,180,60,90,120,70];
+        const startX = margin;
+        // header
+        let x = startX;
+        headers.forEach((h,i)=>{ doc.text(h, x+2, y); x += colWidths[i]; });
+        y += 18;
+        // rows
+        enrollmentData.forEach((r)=>{
+          x = startX; if(y>750){ doc.addPage(); y = 60; }
+          const cells = [r['INDEX NUMBER']||r.index||'', r['NAME']||r.name||'', r['GENDER']||'', r['PHONE NUMBER']||r.phone||'', r['PROGRAM']||r.program||'', r['DATE ENROLLED']||r.date||''];
+          cells.forEach((c,i)=>{ const txt = String(c).slice(0,40); doc.text(txt, x+2, y); x += colWidths[i]; });
+          y += 16;
+        });
+        doc.save('enrollment_export.pdf');
+      });
+
+      // Clear local enrollment (admin-only)
+      $('clearEnrollBtn').addEventListener('click', ()=>{
+        if(!currentUser || currentUser.role!=='Admin'){ showAlert('Only Admin can clear local enrollment.'); return; }
+        if(!confirm('Clear local enrollment data? This cannot be undone locally.')) return;
+        enrollmentData = []; localStorage.removeItem('enrollmentData'); renderEnrollmentList(); showAlert('Local enrollment cleared.');
+      });
+
+      // Templates
+      $('downloadPlacedTemplate').addEventListener('click', ()=>{
+        const sample = [{ 'INDEX NUMBER':'0801061023','NAME':'JOHN DOE','GENDER':'Male','PHONE NUMBER':'0240000000','RESIDENCE TYPE':'Day' }];
+        const ws = XLSX.utils.json_to_sheet(sample); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Placed'); XLSX.writeFile(wb,'placed_template.xlsx');
+      });
+      $('downloadEnrollTemplate').addEventListener('click', ()=>{
+        const sample = [{ 'INDEX NUMBER':'ENR0001','NAME':'JANE DOE','GENDER':'Female','PHONE NUMBER':'0240000000','RESIDENCE TYPE':'Day','PROGRAM':'Gen. Arts','CLASS':'Form 1','DATE ENROLLED':'2025-10-18' }];
+        const ws = XLSX.utils.json_to_sheet(sample); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Enrollment'); XLSX.writeFile(wb,'enrollment_template.xlsx');
+      });
+
+      // Sign-in modal
+      $('signBtn').addEventListener('click', ()=>{
+        if(currentUser){ if(confirm('Sign out?')){ currentUser = null; localStorage.removeItem('ak_current_user'); updateUserUI(); } return; }
+        $('signinModal').style.display='flex'; $('signin_user').focus();
+      });
+      $('signinCancel').addEventListener('click', ()=>{ $('signinModal').style.display='none'; });
+      $('signinSubmit').addEventListener('click', ()=>{
+        const u = $('signin_user').value.trim(); const p = $('signin_pass').value;
+        if(!u || !p){ showAlert('Enter username and password'); return; }
+        const found = users.find(x=>x.username===u && x.password===p);
+        if(!found){ showAlert('Invalid credentials'); return; }
+        currentUser = { username: found.username, role: found.role };
+        localStorage.setItem('ak_current_user', JSON.stringify(currentUser));
+        $('signinModal').style.display='none'; updateUserUI(); showAlert('Signed in as ' + currentUser.username + ' ('+currentUser.role+')');
+      });
+
+      // Install prompt handling
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e)=>{
+        e.preventDefault(); deferredPrompt = e; $('installBtn').style.display='inline-block';
+      });
+      $('installBtn').addEventListener('click', async ()=>{
+        if(!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        deferredPrompt = null; $('installBtn').style.display='none';
+      });
+
+      // Download sw.js (present the inline sw source to user as a download)
+      $('downloadSwBtn').addEventListener('click', ()=>{
+        const source = inlineSwSource(); // get sw source string
+        const blob = new Blob([source], {type:'text/javascript'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'sw.js'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        showAlert('sw.js downloaded. For best offline reliability, place sw.js at site root and ensure navigator.serviceWorker.register(\"/sw.js\") is used.');
+      });
+
+      // Search enter key
+      $('placedQuery').addEventListener('keydown', (e)=>{ if(e.key==='Enter') $('placedSearchBtn').click(); });
+
+      // Service Worker registration (best-effort inline)
+      try {
+        if('serviceWorker' in navigator){
+          const swCode = inlineSwSource();
+          // Attempt to register from a blob. NOTE: some browsers disallow blob registrations.
+          const swBlob = new Blob([swCode], {type:'text/javascript'});
+          const swUrl = URL.createObjectURL(swBlob);
+          navigator.serviceWorker.register(swUrl).then(reg=>{
+            console.log('Service worker registered from blob (some browsers block this):', reg);
+            // revoke objectURL after a short delay
+            setTimeout(()=>URL.revokeObjectURL(swUrl), 2000);
+          }).catch(err=>{
+            console.warn('Blob SW registration failed (this can be normal). Trying fallback: register /sw.js', err);
+            // fallback attempt to register '/sw.js' (works if you add a sw.js at root)
+            navigator.serviceWorker.register('/sw.js').then(reg=>console.log('sw registered from /sw.js',reg)).catch(e=>console.warn('fallback /sw.js failed',e));
+          });
+        }
+      } catch(e){ console.warn('SW registration error', e); }
+
+      // final initial render
+      renderEnrollmentList(); updateUserUI();
     }
 
-    /* ---------------------------
-       Event wiring
-       --------------------------- */
+    // Provide the inline sw source (same as the separate sw.js you'd host)
+    function inlineSwSource(){
+      return `const CACHE_NAME = 'ak-student-cache-v1';
+const ASSETS = [
+  '/', location.pathname, location.pathname + 'index.html',
+  // external libs
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+];
 
-    // Dashboard is default, initial render
-    updateDashboard();
-    renderEnrollList();
-
-    // Tabs
-    document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
-      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      document.querySelectorAll('.tab-content').forEach(c=>c.style.display='none');
-      document.getElementById(t.dataset.tab).style.display='block';
-      // trigger chart resize/update when dashboard shown
-      if(t.dataset.tab === 'dashboard') { updateDashboard(); barChart.resize(); pieChart.resize(); }
-    }));
-
-    // Upload placed
-    document.getElementById('uploadPlacedFile').addEventListener('change', async (e)=>{
-      const f = e.target.files[0]; if(!f) return;
-      const incoming = await handleExcelFile(f);
-      const added = mergeInto(placed, incoming, 'INDEX NUMBER');
-      savePlaced(placed);
-      alert(`Placed: ${added} new record(s) merged.`);
-      updateDashboard();
-      e.target.value = '';
-    });
-
-    // Upload enrollment
-    document.getElementById('uploadEnrollmentFile').addEventListener('change', async (e)=>{
-      const f = e.target.files[0]; if(!f) return;
-      const incoming = await handleExcelFile(f);
-      // enrich fields to match keys
-      incoming.forEach(r=>{
-        if(!r['lastEditedBy']) r.lastEditedBy = DEFAULT_EDITOR;
-        if(!r['lastModified']) r.lastModified = nowISO();
-      });
-      const added = mergeInto(enrolled, incoming, 'INDEX NUMBER');
-      saveEnroll(enrolled);
-      alert(`Enrollment: ${added} new record(s) merged.`);
-      renderEnrollList();
-      e.target.value = '';
-    });
-
-    // Generic upload for the search tab (persist)
-    document.getElementById('uploadAnyFile').addEventListener('change', async (e)=>{
-      const f = e.target.files[0]; if(!f) return;
-      const incoming = await handleExcelFile(f);
-      // ask user: treat as placed or enrollment
-      const treat = confirm('Click OK to treat this as ENROLLMENT (merge into enrollment). Cancel to treat as PLACED.');
-      if(treat){
-        incoming.forEach(r=>{ r.lastEditedBy = r.lastEditedBy || DEFAULT_EDITOR; r.lastModified = r.lastModified || nowISO(); });
-        const added = mergeInto(enrolled, incoming, 'INDEX NUMBER');
-        saveEnroll(enrolled);
-        alert(`Merged ${added} records into Enrollment.`);
-        renderEnrollList();
-      } else {
-        const added = mergeInto(placed, incoming, 'INDEX NUMBER');
-        savePlaced(placed);
-        alert(`Merged ${added} records into Placed.`);
-        updateDashboard();
-      }
-      e.target.value = '';
-    });
-
-    // Search
-    document.getElementById('doSearchBtn').addEventListener('click', ()=>{
-      const q = String(document.getElementById('searchQuery').value||'').trim().toLowerCase();
-      if(!q) return alert('Enter query');
-      // search both datasets
-      const combined = [...placed, ...enrolled];
-      const results = combined.filter(r => {
-        const idx = String(r['INDEX NUMBER']||'').toLowerCase();
-        const name = String(r['NAME']||'').toLowerCase();
-        return idx.includes(q) || name.includes(q);
-      });
-      renderSearchResults(results);
-    });
-
-    // Add enrollment via form
-    document.getElementById('addEnrollmentBtn').addEventListener('click', ()=>{
-      const idx = String(document.getElementById('e_index').value||'').trim();
-      const name = String(document.getElementById('e_name').value||'').trim();
-      const gender = document.getElementById('e_gender').value || '';
-      const program = document.getElementById('e_prog').value || '';
-      const klass = document.getElementById('e_class').value || '';
-      const phone = document.getElementById('e_phone').value || '';
-
-      if(!idx || !name) return alert('Index and Name are required');
-
-      // duplicate check across both datasets
-      const dupPlaced = placed.some(p => String(p['INDEX NUMBER']||'').trim() === idx);
-      const dupEnroll = enrolled.some(e => String(e['INDEX NUMBER']||'').trim() === idx);
-      if(dupPlaced || dupEnroll){
-        if(!confirm('A record with this Index exists (placed or enrolled). Click OK to still add, Cancel to stop.')) return;
-      }
-
-      const record = {
-        'INDEX NUMBER': idx,
-        'NAME': name,
-        'GENDER': gender,
-        'PROGRAM': program,
-        'CLASS': klass,
-        'PHONE NUMBER': phone,
-        lastEditedBy: DEFAULT_EDITOR,
-        lastModified: nowISO()
-      };
-
-      enrolled.push(record);
-      saveEnroll(enrolled);
-      renderEnrollList();
-
-      // clear form
-      document.getElementById('e_index').value=''; document.getElementById('e_name').value=''; document.getElementById('e_phone').value='';
-
-      alert('Enrollment record saved locally.');
-      updateDashboard();
-    });
-
-    // Export handlers
-    function exportDataToExcel(arr, name){
-      const ws = XLSX.utils.json_to_sheet(arr);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, name);
-      XLSX.writeFile(wb, `${name.replace(/\s+/g,'_')}.xlsx`);
-    }
-
-    document.getElementById('exportPlacedBtn').addEventListener('click', ()=> exportDataToExcel(placed || [], 'Placed'));
-    document.getElementById('exportEnrollBtn').addEventListener('click', ()=> exportDataToExcel(enrolled || [], 'Enrollment'));
-    document.getElementById('exportPlaced').addEventListener && document.getElementById('exportPlaced').addEventListener('click', ()=> exportDataToExcel(placed || [], 'Placed'));
-
-    // enroll tab export
-    document.getElementById('exportEnrollmentBtn').addEventListener('click', ()=> exportDataToExcel(enrolled || [], 'Enrollment'));
-
-    // Manage: drop
-    document.getElementById('dropPlacedBtn').addEventListener('click', ()=>{
-      if(confirm('Drop Placed data from localStorage?')){ localStorage.removeItem(KEY_PLACED); localStorage.removeItem(KEY_PLACED_META); placed = []; updateDashboard(); alert('Placed data dropped.'); }
-    });
-    document.getElementById('dropEnrollBtn').addEventListener('click', ()=>{
-      if(confirm('Drop Enrollment data from localStorage?')){ localStorage.removeItem(KEY_ENROLL); localStorage.removeItem(KEY_ENROLL_META); enrolled = []; renderEnrollList(); updateDashboard(); alert('Enrollment data dropped.'); }
-    });
-    document.getElementById('dropAllBtn').addEventListener('click', ()=>{
-      if(confirm('Drop ALL stored data (Placed + Enrollment)?')){
-        localStorage.removeItem(KEY_PLACED); localStorage.removeItem(KEY_PLACED_META);
-        localStorage.removeItem(KEY_ENROLL); localStorage.removeItem(KEY_ENROLL_META);
-        placed = []; enrolled = []; renderEnrollList(); updateDashboard(); alert('All data dropped.');
-      }
-    });
-
-    // Download template
-    document.getElementById('downloadTemplateBtn').addEventListener('click', ()=>{
-      const sample = [{'INDEX NUMBER':'001','NAME':'John Doe','GENDER':'Male','PROGRAM':'Science','CLASS':'Form 1','PHONE NUMBER':'0240000000'}];
-      exportDataToExcel(sample, 'template');
-    });
-
-    // storage info initial
-    storageInfoEl.textContent = `${localStorageToSize().toLocaleString()} bytes used in localStorage`;
-
-    /* ---------------------------
-       Edit & Delete helpers (enrollment)
-       --------------------------- */
-    window.editEnroll = function(i){
-      const r = enrolled[i];
-      if(!r) return;
-      document.getElementById('e_index').value = r['INDEX NUMBER'] || '';
-      document.getElementById('e_name').value = r['NAME'] || '';
-      document.getElementById('e_gender').value = r['GENDER'] || 'Male';
-      document.getElementById('e_prog').value = r['PROGRAM'] || '';
-      document.getElementById('e_class').value = r['CLASS'] || '';
-      document.getElementById('e_phone').value = r['PHONE NUMBER'] || '';
-      // remove the record so that saving will re-add it (update)
-      enrolled.splice(i,1);
-      saveEnroll(enrolled);
-      renderEnrollList();
-      updateDashboard();
-    };
-
-    window.deleteEnroll = function(i){
-      if(!confirm('Delete this enrolled student?')) return;
-      enrolled.splice(i,1);
-      saveEnroll(enrolled);
-      renderEnrollList();
-      updateDashboard();
-    };
-
-    /* ---------------------------
-       sw.js download (starter) - no blob registration
-       --------------------------- */
-    const swStarter = `// sw.js starter - host this file on the same origin as your app to enable service worker caching
-const CACHE_NAME = 'ak-school-cache-v1';
-const ASSETS = ['/', './'];
-self.addEventListener('install', (event) => {
+self.addEventListener('install', event => {
   self.skipWaiting();
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS).catch(()=>console.warn('Some assets failed to cache'))));
 });
-self.addEventListener('activate', (event) => {
+
+self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim());
 });
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  event.respondWith(caches.match(event.request).then((r) => r || fetch(event.request).then((f) => { if (event.request.url.startsWith('http')) caches.open(CACHE_NAME).then(c => c.put(event.request, f.clone())); return f; })));
+
+self.addEventListener('fetch', event => {
+  if(event.request.method !== 'GET') return;
+  // network-first for external libs, cache-first for same-origin
+  const url = new URL(event.request.url);
+  if(url.origin !== location.origin){
+    event.respondWith(fetch(event.request).catch(()=>caches.match(event.request)));
+  } else {
+    event.respondWith(caches.match(event.request).then(resp => resp || fetch(event.request).then(r=>{ caches.open(CACHE_NAME).then(c=>c.put(event.request, r.clone())); return r; }).catch(()=>caches.match('/'))));
+  }
 });`;
+    }
 
-    document.getElementById('downloadSwBtn').addEventListener('click', ()=>{
-      const blob = new Blob([swStarter], { type: 'text/javascript' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'sw.js'; document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
-      alert('Downloaded sw.js starter. Host it at /sw.js on your server and register with navigator.serviceWorker.register(\"/sw.js\")');
-    });
-
-    /* ---------------------------
-       PWA install prompt handling
-       --------------------------- */
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e)=>{
-      e.preventDefault();
-      deferredPrompt = e;
-      document.getElementById('installBtn').style.display = 'inline-block';
-    });
-    document.getElementById('installBtn').addEventListener('click', async ()=>{
-      if(!deferredPrompt) return;
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      document.getElementById('installBtn').style.display = 'none';
-    });
-
-    /* ---------------------------
-       Auto-save on unload and update indicators
-       --------------------------- */
-    window.addEventListener('beforeunload', ()=>{
-      // ensure meta saved
-      savePlaced(placed);
-      saveEnroll(enrolled);
-    });
-
-    // Keep dashboard live when enrollment changes - we call updateDashboard() or renderEnrollList() where appropriate
-    // Initial update to reflect loaded persisted data:
-    updateDashboard();
-    renderEnrollList();
-
+    // boot
+    window.addEventListener('DOMContentLoaded', setup);
+  })();
   </script>
+
+  <!--
+    If you deploy this to Vercel for stable offline usage, please also create a small /sw.js file at the site root with the same content as the inline service worker above.
+    Copy-paste the content between the backticks from the inlineSwSource() function (or click "Download sw.js" in the Manage tab) and put it in /sw.js in your project root so navigator.serviceWorker.register('/sw.js') will reliably register across browsers.
+
+    Example sw.js (same as inline):
+    ------------------------------------------------------
+    const CACHE_NAME = 'ak-student-cache-v1';
+    const ASSETS = [ '/', '/index.html', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', ... ];
+    self.addEventListener('install', event => { ... });
+    self.addEventListener('activate', event => { ... });
+    self.addEventListener('fetch', event => { ... });
+    ------------------------------------------------------
+
+    Known limitation: PDF parsing here uses pdf.js text extraction heuristics; scanned PDFs require OCR (Tesseract.js) — tell me if you'd like OCR added.
+  -->
+
 </body>
 </html>
